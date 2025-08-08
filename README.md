@@ -32,8 +32,8 @@ You can install `issueify` by building it from the source. This ensures you have
 1.  **Clone the repository:**
 
     ```bash
-    git clone [https://github.com/YOUR_USERNAME/YOUR_REPO.git](https://github.com/YOUR_USERNAME/YOUR_REPO.git)
-    cd YOUR_REPO
+    git clone https://github.com/andrinoff/issueify.git
+    cd issueify
     ```
 
 2.  **Build the binary:**
