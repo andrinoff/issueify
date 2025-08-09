@@ -16,7 +16,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/google/go-github/v45/github" 
+	"github.com/google/go-github/v45/github"
 	"golang.org/x/oauth2"
 )
 
@@ -64,12 +64,31 @@ var defaultLabelPatterns = []LabelPattern{
 
 // --- Core Logic ---
 
-func getDBPath() (string, error) {
-	home, err := os.UserHomeDir()
+func getRepoRoot() (string, error) {
+	path, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("could not get user home directory: %w", err)
+		return "", err
 	}
-	return filepath.Join(home, dbFileName), nil
+
+	for {
+		if _, err := os.Stat(filepath.Join(path, ".git")); err == nil {
+			return path, nil
+		}
+
+		parent := filepath.Dir(path)
+		if parent == path {
+			return "", fmt.Errorf("not a git repository")
+		}
+		path = parent
+	}
+}
+
+func getDBPath() (string, error) {
+	root, err := getRepoRoot()
+	if err != nil {
+		return "", fmt.Errorf("could not find repository root: %w", err)
+	}
+	return filepath.Join(root, dbFileName), nil
 }
 
 func loadIssues() ([]Issue, error) {
@@ -277,7 +296,6 @@ func publishToGitHub() {
 	var token, owner, repo string
 
 	// Try to get config from 'gh' CLI first.
-	// We run `gh repo view` to get the owner and repo name.
 	ghRepoCmd := exec.Command("gh", "repo", "view", "--json", "name,owner", "--jq", ".owner.login + \"/\" + .name")
 	ghRepoOutput, err := ghRepoCmd.Output()
 	if err == nil {
@@ -288,18 +306,15 @@ func publishToGitHub() {
 		}
 	}
 
-	// We run `gh auth token` to get the authentication token.
 	ghTokenCmd := exec.Command("gh", "auth", "token")
 	ghTokenOutput, err := ghTokenCmd.Output()
 	if err == nil {
 		token = strings.TrimSpace(string(ghTokenOutput))
 	}
 
-	// If we got all the info from `gh`, we can proceed.
 	if owner != "" && repo != "" && token != "" {
 		fmt.Printf("Detected repository '%s/%s' and using auth token from 'gh' CLI.\n", owner, repo)
 	} else {
-		// If 'gh' failed for any reason, fall back to environment variables.
 		fmt.Println("Could not get repository info or token from 'gh' CLI. Falling back to environment variables.")
 		token = os.Getenv("GITHUB_TOKEN")
 		owner = os.Getenv("GITHUB_OWNER")
@@ -332,13 +347,18 @@ func publishToGitHub() {
 			_, _, err := client.Issues.Create(ctx, owner, repo, gitIssue)
 			if err != nil {
 				log.Printf("Error creating GitHub issue for local ID #%d: %v", issue.ID, err)
-				continue // Continue to the next issue
+				continue
 			}
 			fmt.Printf("Successfully created GitHub issue for: \"%s\"\n", issue.Title)
 			count++
 		}
 	}
 	fmt.Printf("Finished. Published %d issues to GitHub.\n", count)
+
+	if err := saveIssues([]Issue{}); err != nil {
+		log.Fatalf("Error clearing local issues after publishing: %v", err)
+	}
+	fmt.Println("Successfully cleared all local issues.")
 }
 
 // --- Main Function and CLI Handling ---
@@ -363,7 +383,8 @@ Commands:
   publish <format>      Publishes all issues in a specified format (markdown, json).
                         Example: issue-tracker publish markdown > ISSUES.md
 
-  publish-github        Publishes all open issues to a GitHub repository.
+  publish-github        Publishes all open issues to a GitHub repository and
+                        clears the local issue database.
                         This command will automatically use the official 'gh' CLI
                         for authentication and repository detection if installed.
                         As a fallback, it will use GITHUB_TOKEN, GITHUB_OWNER,
