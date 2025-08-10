@@ -289,10 +289,10 @@ func publishIssues(format string) {
 	}
 }
 
-// publishToGitHub creates issues in a GitHub repository from local open issues.
+// pushToGithub creates issues in a GitHub repository from local open issues.
 // It will try to use the 'gh' CLI for repository info and authentication first.
 // If 'gh' is not available, it will fall back to environment variables.
-func publishToGitHub() {
+func pushToGithub() {
 	var token, owner, repo string
 
 	// Try to get config from 'gh' CLI first.
@@ -383,15 +383,14 @@ Commands:
   publish <format>      Publishes all issues in a specified format (markdown, json).
                         Example: issue-tracker publish markdown > ISSUES.md
 
-  publish-github        Publishes all open issues to a GitHub repository and
+  push        Pushes all open issues to a GitHub repository and
                         clears the local issue database.
                         This command will automatically use the official 'gh' CLI
                         for authentication and repository detection if installed.
                         As a fallback, it will use GITHUB_TOKEN, GITHUB_OWNER,
                         and GITHUB_REPO environment variables.
 
-  help                  Shows this help message.
-`)
+  help                  Shows this help message.`)
 }
 
 func main() {
@@ -430,8 +429,8 @@ func main() {
 			log.Fatal("Error: 'publish' command requires a format.")
 		}
 		publishIssues(args[0])
-	case "publish-github":
-		publishToGitHub()
+	case "push":
+		pushToGithub()
 	case "help":
 		printHelp()
 	default:
