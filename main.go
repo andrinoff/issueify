@@ -84,12 +84,29 @@ func getRepoRoot() (string, error) {
 }
 
 func getDBPath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("could not get user config directory: %w", err)
+	}
+
+	issueifyConfigDir := filepath.Join(configDir, "issueify")
+	if err := os.MkdirAll(issueifyConfigDir, 0755); err != nil {
+		return "", fmt.Errorf("could not create config directory: %w", err)
+	}
+
 	root, err := getRepoRoot()
 	if err != nil {
 		return "", fmt.Errorf("could not find repository root: %w", err)
 	}
-	return filepath.Join(root, dbFileName), nil
+
+	// Create a safe filename from the repo root path by replacing separators.
+	repoIdentifier := strings.ReplaceAll(root, string(os.PathSeparator), "_")
+	repoIdentifier = strings.ReplaceAll(repoIdentifier, ":", "") // For Windows drives
+	dbFileName := fmt.Sprintf("%s.json", repoIdentifier)
+
+	return filepath.Join(issueifyConfigDir, dbFileName), nil
 }
+
 
 func loadIssues() ([]Issue, error) {
 	path, err := getDBPath()
