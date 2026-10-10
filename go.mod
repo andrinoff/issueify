@@ -1,10 +1,10 @@
 module issueify
 
-go 1.24.5
+go 1.26.0
 
 require (
 	github.com/google/go-github/v45 v45.2.0
-	golang.org/x/oauth2 v0.30.0
+	golang.org/x/oauth2 v0.37.0
 )
 
 require (
